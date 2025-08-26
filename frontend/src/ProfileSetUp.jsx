@@ -6,27 +6,39 @@ const ProfileSetUp = () => {
 
   const [techStacks, setTechStacks] = useState([]);
   const [inputStack, setInputStack] = useState("");
-  const [role, setRole] = useState("");
+  const [rolesSelected, setRolesSelected] = useState([]);
   const [otherRole, setOtherRole] = useState("");
 
+  // 🔥 Expanded Tech Stack Options (Commonly Used Stacks)
   const availableStacks = [
-    "React",
-    "Node.js",
-    "Python",
-    "C++",
-    "Java",
-    "Flutter",
-    "MongoDB",
-    "TailwindCSS",
-    "Django",
-    "TensorFlow",
-    "PyTorch",
-    "Angular",
+    // Frontend
+    "HTML", "CSS", "JavaScript", "TypeScript", "React", "Next.js", "Angular", "Vue.js", "Svelte",
+    "TailwindCSS", "Bootstrap", "Material-UI",
+    // Backend
+    "Node.js", "Express.js", "Django", "Flask", "Spring Boot", "Ruby on Rails", "Laravel", "ASP.NET Core",
+    "FastAPI", "NestJS",
+    // Mobile & Cross-Platform
+    "React Native", "Flutter", "Ionic", "Kotlin", "Swift", "Java (Android)",
+    // Databases
+    "MongoDB", "MySQL", "PostgreSQL", "SQLite", "Redis", "Firebase", "Supabase", "OracleDB",
+    // DevOps & Cloud
+    "Docker", "Kubernetes", "AWS", "Azure", "Google Cloud", "Heroku", "Netlify", "Vercel", "CI/CD",
+    "GitHub Actions",
+    // Programming Languages
+    "C", "C++", "C#", "Java", "Python", "Go", "Rust", "PHP", "Ruby", "Scala", "R",
+    // AI & ML
+    "TensorFlow", "PyTorch", "Keras", "OpenCV", "Scikit-learn", "Pandas", "NumPy",
+    "LangChain", "Hugging Face Transformers",
+    // Cybersecurity
+    "Kali Linux", "Metasploit", "Burp Suite", "Wireshark", "Nmap",
+    // Misc
+    "GraphQL", "REST API", "WebSockets", "Blockchain", "Solidity", "Hardhat", "Truffle"
   ];
 
   const roles = [
     "Frontend Developer",
     "Backend Developer",
+    "Full Stack Developer",
     "Designer",
     "Machine Learning Engineer",
     "AI Engineer",
@@ -34,15 +46,26 @@ const ProfileSetUp = () => {
     "Other",
   ];
 
+  // Add tech stack when typing or selecting
   const handleAddStack = (stack) => {
-    if (!techStacks.includes(stack)) {
+    if (stack && !techStacks.includes(stack)) {
       setTechStacks([...techStacks, stack]);
     }
     setInputStack("");
   };
 
+  // Remove tech stack
   const handleRemoveStack = (stack) => {
     setTechStacks(techStacks.filter((s) => s !== stack));
+  };
+
+  // Handle role selection (multiple allowed)
+  const toggleRole = (role) => {
+    if (rolesSelected.includes(role)) {
+      setRolesSelected(rolesSelected.filter((r) => r !== role));
+    } else {
+      setRolesSelected([...rolesSelected, role]);
+    }
   };
 
   const handleSubmit = (e) => {
@@ -52,7 +75,9 @@ const ProfileSetUp = () => {
       year: e.target.year.value,
       collegeMail: e.target.collegeMail.value,
       techStacks,
-      role: role === "Other" ? otherRole : role,
+      roles: rolesSelected.includes("Other")
+        ? [...rolesSelected.filter((r) => r !== "Other"), otherRole]
+        : rolesSelected,
       linkedin: e.target.linkedin.value,
       github: e.target.github.value,
       bio: e.target.bio.value,
@@ -60,7 +85,7 @@ const ProfileSetUp = () => {
 
     console.log("Profile Submitted: ", profileData);
 
-    // 👉 save to backend or Firebase
+    // 👉 send profileData to backend
     // navigate("/devs");
   };
 
@@ -138,7 +163,7 @@ const ProfileSetUp = () => {
               type="text"
               value={inputStack}
               onChange={(e) => setInputStack(e.target.value)}
-              placeholder="Type to add a tech stack..."
+              placeholder="Type or select a tech stack..."
               className="w-full p-3 bg-[#0F0F0F] border border-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
@@ -155,26 +180,26 @@ const ProfileSetUp = () => {
             </datalist>
           </div>
 
-          {/* Preferred Role */}
+          {/* Preferred Roles */}
           <div>
-            <label className="text-sm text-gray-400">Preferred Role</label>
+            <label className="text-sm text-gray-400">Preferred Roles</label>
             <div className="flex flex-wrap gap-2 mt-2">
               {roles.map((r) => (
                 <button
                   key={r}
                   type="button"
                   className={`px-4 py-2 rounded-lg border text-sm ${
-                    role === r
+                    rolesSelected.includes(r)
                       ? "bg-purple-500 text-white"
                       : "bg-[#0F0F0F] text-gray-300 border-gray-700"
                   }`}
-                  onClick={() => setRole(r)}
+                  onClick={() => toggleRole(r)}
                 >
                   {r}
                 </button>
               ))}
             </div>
-            {role === "Other" && (
+            {rolesSelected.includes("Other") && (
               <input
                 type="text"
                 placeholder="Enter your role"
