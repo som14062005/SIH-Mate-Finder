@@ -28,34 +28,35 @@ function SignupPage() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    const v = validate();
-    setErrors(v);
-    if (Object.keys(v).length) return;
+  e.preventDefault();
+  const v = validate();
+  setErrors(v);
+  if (Object.keys(v).length) return;
 
-    try {
-      const response = await fetch("http://localhost:3000/auth/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(form),
-      });
+  try {
+    const response = await fetch("http://localhost:3000/auth/signup", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(form),
+    });
 
-      const data = await response.json();
+    const data = await response.json();
 
-      if (!response.ok) {
-        alert(data.message || "Signup failed");
-        return;
-      }
-
-      alert("Signup successful!");
-      navigate("/login");
-    } catch (error) {
-      console.error("Signup error:", error);
-      alert("Something went wrong. Try again.");
+    if (!response.ok) {
+      alert(data.message || "Signup failed");
+      return;
     }
-  };
+
+    alert("Signup successful!");
+    navigate("/login");
+  } catch (error) {
+    console.error("Signup error:", error);
+    alert("Something went wrong. Try again.");
+  }
+};
+
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-[#0D0D0D]">

@@ -28,34 +28,44 @@ function LoginPage() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    const v = validate();
-    setErrors(v);
-    if (Object.keys(v).length) return;
+  e.preventDefault();
+  const v = validate();
+  setErrors(v);
+  if (Object.keys(v).length) return;
 
-    try {
-      const response = await fetch("http://localhost:3000/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(form),
-      });
+  try {
+    const response = await fetch("http://localhost:3000/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(form),
+    });
 
-      const data = await response.json();
+    const data = await response.json();
 
-      if (!response.ok) {
-        alert(data.message || "Login failed");
-        return;
-      }
-
-      alert("Login successful!");
-      navigate("/ProfileSetUp"); // 👈 Change this to your actual route
-    } catch (error) {
-      console.error("Login error:", error);
-      alert("Something went wrong. Try again.");
+    if (!response.ok) {
+      alert(data.message || "Login failed");
+      return;
     }
-  };
+
+    // ✅ Save token + email in sessionStorage
+    sessionStorage.setItem("token", data.token);
+    sessionStorage.setItem("email", data.user.email);
+
+    console.log("Saved in session:", {
+      email: sessionStorage.getItem("email"),
+      token: sessionStorage.getItem("token"),
+    });
+
+    alert("Login successful!");
+    navigate("/ProfileSetUp");
+  } catch (error) {
+    console.error("Login error:", error);
+    alert("Something went wrong. Try again.");
+  }
+};
+
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-[#0B0B0B]">
