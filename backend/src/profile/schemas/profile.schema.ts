@@ -28,6 +28,9 @@ export class Profile {
 
   @Prop()
   bio: string;
+
+  @Prop({ default: false }) // ✅ add this
+  isPosted: boolean;
 }
 
 export const ProfileSchema = SchemaFactory.createForClass(Profile);

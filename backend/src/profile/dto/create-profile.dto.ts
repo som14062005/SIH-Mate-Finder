@@ -1,4 +1,5 @@
 export class CreateProfileDto {
+  readonly userId: string;       // Add this
   readonly name: string;
   readonly year: string;
   readonly collegeMail: string;
