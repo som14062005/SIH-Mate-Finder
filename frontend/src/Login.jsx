@@ -27,7 +27,7 @@ function LoginPage() {
     return errs;
   };
 
-  const handleSubmit = async (e) => {
+ const handleSubmit = async (e) => {
   e.preventDefault();
   const v = validate();
   setErrors(v);
@@ -49,14 +49,15 @@ function LoginPage() {
       return;
     }
 
-    // ✅ Save token + email in sessionStorage
+    // ✅ Save token + email + userId in sessionStorage
     sessionStorage.setItem("token", data.token);
     sessionStorage.setItem("email", data.user.email);
+    sessionStorage.setItem("userId", data.user.id); // <-- your user id
 
-    console.log("Saved in session:", {
-      email: sessionStorage.getItem("email"),
-      token: sessionStorage.getItem("token"),
-    });
+    console.log("Login saved in sessionStorage:");
+console.log("profile ID:", sessionStorage.getItem("userId"));
+console.log("Email:", sessionStorage.getItem("email"));
+console.log("Token:", sessionStorage.getItem("token"));
 
     alert("Login successful!");
     navigate("/ProfileSetUp");
@@ -65,6 +66,7 @@ function LoginPage() {
     alert("Something went wrong. Try again.");
   }
 };
+
 
 
   return (

@@ -1,5 +1,5 @@
 // src/pages/Dashboard.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -28,97 +28,126 @@ const roles = [
   "Other"
 ];
 
-// ===== Dummy feed data =====
-const dummyUsersData = [
-  {
-    _id: "user1",
-    username: "alex_dev",
-    bio: "Full-stack developer passionate about React and Node.js. Building the future of web applications.",
-    skills: ["React", "Node.js", "JavaScript", "MongoDB"],
-    role: "Fullstack Developer",
-  },
-  {
-    _id: "user3",
-    username: "mike_python",
-    bio: "Data scientist and machine learning engineer. Love working with Python and AI technologies.",
-    skills: ["Python", "Machine Learning", "Data Science", "TensorFlow"],
-    role: "Data Scientist",
-  },
-  {
-    _id: "user9",
-    username: "ryan_fullstack",
-    bio: "Full-stack engineer with 5+ years experience. Love building end-to-end solutions.",
-    skills: ["React", "Node.js", "TypeScript", "AWS"],
-    role: "Fullstack Developer",
-  },
-];
-
-// ===== Dummy current user =====
-const dummyMyProfile = {
-  _id: "currentUser",
-  username: "my_username",
-  bio: "Your profile bio here...",
-  skills: ["React", "Node.js"],
-  role: "Frontend Developer",
-};
-
 export default function Dashboard() {
-  const [usersData, setUsersData] = useState(dummyUsersData);
+  const [usersData, setUsersData] = useState([]);
+  const [myProfile, setMyProfile] = useState(null);
   const [searchUsername, setSearchUsername] = useState("");
   const [searchSkill, setSearchSkill] = useState("");
   const [searchRole, setSearchRole] = useState("");
   const [activeTab, setActiveTab] = useState("feed");
-  const [myProfile] = useState(dummyMyProfile);
 
   const navigate = useNavigate();
+  const loggedInEmail = sessionStorage.getItem("email"); // get logged-in email
 
-  /** Navigate to user profile */
-  const handleViewProfile = (userId, username) => {
-    navigate("/profile"); // stub
+  // Fetch all posted profiles for feed
+  const fetchPostedProfiles = () => {
+    fetch("http://localhost:3000/profile/posted/all")
+      .then((res) => res.json())
+      .then((data) => {
+        // Filter out my own profile from the feed
+        const filteredProfiles = data.profiles?.filter(
+          (user) => user.collegeMail !== loggedInEmail
+        ) || [];
+        setUsersData(filteredProfiles);
+      })
+      .catch((err) => console.error("Failed to fetch posted profiles:", err));
   };
 
-  /** Post my profile to feed */
-  const handlePostProfile = () => {
-    if (!usersData.find((u) => u._id === myProfile._id)) {
-      setUsersData((prev) => [...prev, myProfile]);
-      alert("Your profile has been posted to the feed!");
-    } else {
-      alert("Profile already posted.");
-    }
+  // Fetch my profile data
+  const fetchMyProfile = () => {
+    fetch("http://localhost:3000/profile")
+      .then((res) => res.json())
+      .then((data) => {
+        // Find my profile based on email
+        const myProf = data.find((user) => user.collegeMail === loggedInEmail);
+        if (myProf) setMyProfile(myProf);
+      })
+      .catch((err) => console.error("Failed to fetch my profile:", err));
   };
 
-  /** Edit profile */
-  const handleEditProfile = () => {
-    alert("Edit Profile clicked - implement update logic here.");
-    // navigate("/profilesetup");
-  };
-
-  /** Delete post */
-  const handleDeleteProfile = () => {
-    setUsersData((prev) => prev.filter((u) => u._id !== myProfile._id));
-    alert("Your profile has been removed from the feed.");
-  };
-
-  /** Navigate to ChatPage */
-  const handleChat = (userId) => {
-    navigate("/ChatPage");
-  };
+  useEffect(() => {
+    fetchPostedProfiles(); // Load posted profiles for feed
+    fetchMyProfile(); // Load my profile data
+  }, [loggedInEmail]);
 
   /** Filtered feed */
   const filteredUsers = usersData.filter((user) => {
-    const matchesUsername = user.username
+    const matchesUsername = user.name
       ?.toLowerCase()
       .includes(searchUsername.toLowerCase());
     const matchesSkill = searchSkill
-      ? user.skills?.some((s) =>
+      ? user.techStacks?.some((s) =>
           s.toLowerCase().includes(searchSkill.toLowerCase())
         )
       : true;
     const matchesRole = searchRole
-      ? user.role?.toLowerCase().includes(searchRole.toLowerCase())
+      ? user.roles?.some((r) => r.toLowerCase().includes(searchRole.toLowerCase()))
       : true;
     return matchesUsername && matchesSkill && matchesRole;
   });
+
+  /** Handlers */
+  const handleViewProfile = (userId, username) => navigate("/profile");
+  
+  const handlePostProfile = async () => {
+    if (!myProfile?._id) {
+      alert("Profile not found!");
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:3000/profile/${myProfile._id}/post`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const updatedProfile = await response.json();
+        setMyProfile(updatedProfile);
+        fetchPostedProfiles(); // Refresh the feed
+        alert("Profile posted successfully!");
+      } else {
+        alert("Failed to post profile");
+      }
+    } catch (error) {
+      console.error("Error posting profile:", error);
+      alert("Error posting profile");
+    }
+  };
+
+  const handleEditProfile = () => alert("Edit profile logic here");
+  
+  const handleDeleteProfile = async () => {
+    if (!myProfile?._id) {
+      alert("Profile not found!");
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:3000/profile/${myProfile._id}/unpost`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const updatedProfile = await response.json();
+        setMyProfile(updatedProfile);
+        fetchPostedProfiles(); // Refresh the feed to remove my profile if it was there
+        alert("Profile removed from public feed!");
+      } else {
+        alert("Failed to remove profile from feed");
+      }
+    } catch (error) {
+      console.error("Error removing profile:", error);
+      alert("Error removing profile");
+    }
+  };
+
+  const handleChat = (userId) => navigate("/ChatPage");
 
   return (
     <div className="min-h-screen w-full flex flex-col bg-[#0D0D0D] text-white">
@@ -210,38 +239,42 @@ export default function Dashboard() {
 
               {/* Feed cards */}
               <div className="space-y-4">
-                {filteredUsers.map((user) => (
-                  <div
-                    key={user._id}
-                    className="p-6 rounded-xl border border-[#333] bg-[#1A1A1A]"
-                  >
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                      <div>
-                        <h3
-                          className="text-xl font-semibold cursor-pointer hover:text-[#A259FF]"
-                          onClick={() => handleViewProfile(user._id, user.username)}
-                        >
-                          {user.username}
-                          <ExternalLink size={16} className="inline ml-2" />
-                        </h3>
-                        <p className="text-[#B3B3B3] mb-2">
-                          {user.bio || "No bio provided."}
-                        </p>
-                        <p className="text-sm text-[#888] mb-3">
-                          Role: {user.role || "Not specified"}
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {user.skills?.map((s) => (
-                            <span
-                              key={s}
-                              className="px-3 py-1 text-xs font-medium rounded-full bg-[#0D0D0D] text-[#A259FF] border border-[#333]"
-                            >
-                              {s}
-                            </span>
-                          ))}
+                {filteredUsers.length === 0 ? (
+                  <div className="text-center py-8 text-[#B3B3B3]">
+                    No posted profiles found matching your search criteria.
+                  </div>
+                ) : (
+                  filteredUsers.map((user) => (
+                    <div
+                      key={user._id}
+                      className="p-6 rounded-xl border border-[#333] bg-[#1A1A1A]"
+                    >
+                      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                        <div>
+                          <h3
+                            className="text-xl font-semibold cursor-pointer hover:text-[#A259FF]"
+                            onClick={() => handleViewProfile(user._id, user.username)}
+                          >
+                            {user.name}
+                            <ExternalLink size={16} className="inline ml-2" />
+                          </h3>
+                          <p className="text-[#B3B3B3] mb-2">
+                            {user.bio || "No bio provided."}
+                          </p>
+                          <p className="text-sm text-[#888] mb-3">
+                            Roles: {user.roles?.join(", ") || "Not specified"}
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {user.techStacks?.map((s) => (
+                              <span
+                                key={s}
+                                className="px-3 py-1 text-xs font-medium rounded-full bg-[#0D0D0D] text-[#A259FF] border border-[#333]"
+                              >
+                                {s}
+                              </span>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                      {user._id !== myProfile._id && (
                         <div className="flex items-center gap-2">
                           <button
                             className="px-4 py-2 rounded-lg bg-[#A259FF] hover:bg-[#8B3EF2] text-white text-sm"
@@ -250,22 +283,35 @@ export default function Dashboard() {
                             Chat!
                           </button>
                         </div>
-                      )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           )}
 
           {/* MY PROFILE TAB */}
-          {activeTab === "profile" && (
+          {activeTab === "profile" && myProfile && (
             <div className="p-6 rounded-xl border border-[#333] bg-[#1A1A1A] space-y-4">
-              <h2 className="text-2xl font-bold">{myProfile.username}</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold">{myProfile.name}</h2>
+                <div className="flex items-center gap-2">
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    myProfile.isPosted 
+                      ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                      : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
+                  }`}>
+                    {myProfile.isPosted ? 'Posted' : 'Not Posted'}
+                  </span>
+                </div>
+              </div>
               <p className="text-[#B3B3B3]">{myProfile.bio}</p>
-              <p className="text-sm text-[#888]">Role: {myProfile.role}</p>
+              <p className="text-sm text-[#888]">
+                Roles: {myProfile.roles?.join(", ") || "Not specified"}
+              </p>
               <div className="flex flex-wrap gap-2">
-                {myProfile.skills.map((s) => (
+                {myProfile.techStacks?.map((s) => (
                   <span
                     key={s}
                     className="px-3 py-1 text-xs rounded-full bg-[#0D0D0D] text-[#A259FF] border border-[#333]"
@@ -274,14 +320,17 @@ export default function Dashboard() {
                   </span>
                 ))}
               </div>
-
-              {/* Actions */}
               <div className="flex gap-3 pt-4">
                 <button
-                  className="px-4 py-2 rounded-lg bg-[#A259FF] hover:bg-[#8B3EF2] text-white"
+                  className={`px-4 py-2 rounded-lg text-white ${
+                    myProfile.isPosted 
+                      ? 'bg-gray-600 hover:bg-gray-700 cursor-not-allowed' 
+                      : 'bg-[#A259FF] hover:bg-[#8B3EF2]'
+                  }`}
                   onClick={handlePostProfile}
+                  disabled={myProfile.isPosted}
                 >
-                  Post My Profile
+                  {myProfile.isPosted ? 'Already Posted' : 'Post My Profile'}
                 </button>
                 <button
                   className="px-4 py-2 rounded-lg bg-[#2A2A2A] hover:bg-[#333] text-white"
@@ -290,12 +339,24 @@ export default function Dashboard() {
                   Edit Profile
                 </button>
                 <button
-                  className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white"
+                  className={`px-4 py-2 rounded-lg text-white ${
+                    myProfile.isPosted 
+                      ? 'bg-red-600 hover:bg-red-700' 
+                      : 'bg-gray-600 hover:bg-gray-700 cursor-not-allowed'
+                  }`}
                   onClick={handleDeleteProfile}
+                  disabled={!myProfile.isPosted}
                 >
-                  Delete My Post
+                  {myProfile.isPosted ? 'Remove from Feed' : 'Not Posted'}
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* Loading state for My Profile */}
+          {activeTab === "profile" && !myProfile && (
+            <div className="p-6 rounded-xl border border-[#333] bg-[#1A1A1A] text-center">
+              <p className="text-[#B3B3B3]">Loading your profile...</p>
             </div>
           )}
         </div>

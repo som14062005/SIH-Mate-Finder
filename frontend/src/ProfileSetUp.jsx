@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 const ProfileSetUp = () => {
@@ -8,58 +8,66 @@ const ProfileSetUp = () => {
   const [inputStack, setInputStack] = useState("");
   const [rolesSelected, setRolesSelected] = useState([]);
   const [otherRole, setOtherRole] = useState("");
+  const [collegeMail, setCollegeMail] = useState("");
+  const [selectedYear, setSelectedYear] = useState("");
+  const [loading, setLoading] = useState(false); // loading state
 
-  // 🔥 Expanded Tech Stack Options (Commonly Used Stacks)
+  // Determine year based on email
+  const determineYearFromEmail = (email) => {
+    if (!email) return "";
+    if (email.includes("2024")) return "2nd Year";
+    if (email.includes("2025")) return "1st Year";
+
+    const rollNumberPrefix = email.substring(0, 2);
+    switch (rollNumberPrefix) {
+      case "22":
+        return "4th Year";
+      case "23":
+        return "3rd Year";
+      default:
+        return "";
+    }
+  };
+
+  // Load email from sessionStorage
+  useEffect(() => {
+    const savedEmail = sessionStorage.getItem("email");
+    if (savedEmail) {
+      setCollegeMail(savedEmail);
+      const autoDetectedYear = determineYearFromEmail(savedEmail);
+      setSelectedYear(autoDetectedYear);
+    }
+  }, []);
+
   const availableStacks = [
-    // Frontend
-    "HTML", "CSS", "JavaScript", "TypeScript", "React", "Next.js", "Angular", "Vue.js", "Svelte",
-    "TailwindCSS", "Bootstrap", "Material-UI",
-    // Backend
-    "Node.js", "Express.js", "Django", "Flask", "Spring Boot", "Ruby on Rails", "Laravel", "ASP.NET Core",
-    "FastAPI", "NestJS",
-    // Mobile & Cross-Platform
-    "React Native", "Flutter", "Ionic", "Kotlin", "Swift", "Java (Android)",
-    // Databases
-    "MongoDB", "MySQL", "PostgreSQL", "SQLite", "Redis", "Firebase", "Supabase", "OracleDB",
-    // DevOps & Cloud
-    "Docker", "Kubernetes", "AWS", "Azure", "Google Cloud", "Heroku", "Netlify", "Vercel", "CI/CD",
-    "GitHub Actions",
-    // Programming Languages
-    "C", "C++", "C#", "Java", "Python", "Go", "Rust", "PHP", "Ruby", "Scala", "R",
-    // AI & ML
-    "TensorFlow", "PyTorch", "Keras", "OpenCV", "Scikit-learn", "Pandas", "NumPy",
-    "LangChain", "Hugging Face Transformers",
-    // Cybersecurity
-    "Kali Linux", "Metasploit", "Burp Suite", "Wireshark", "Nmap",
-    // Misc
-    "GraphQL", "REST API", "WebSockets", "Blockchain", "Solidity", "Hardhat", "Truffle"
+    "HTML", "CSS", "JavaScript", "TypeScript", "React", "Next.js", "Angular",
+    "Vue.js", "Svelte", "TailwindCSS", "Bootstrap", "Material-UI", "Node.js",
+    "Express.js", "Django", "Flask", "Spring Boot", "Ruby on Rails", "Laravel",
+    "ASP.NET Core", "FastAPI", "NestJS", "React Native", "Flutter", "Ionic",
+    "Kotlin", "Swift", "Java (Android)", "MongoDB", "MySQL", "PostgreSQL",
+    "SQLite", "Redis", "Firebase", "Supabase", "OracleDB", "Docker", "Kubernetes",
+    "AWS", "Azure", "Google Cloud", "Heroku", "Netlify", "Vercel", "CI/CD",
+    "GitHub Actions", "C", "C++", "C#", "Java", "Python", "Go", "Rust", "PHP",
+    "Ruby", "Scala", "R", "TensorFlow", "PyTorch", "Keras", "OpenCV", "Scikit-learn",
+    "Pandas", "NumPy", "LangChain", "Hugging Face Transformers", "Kali Linux",
+    "Metasploit", "Burp Suite", "Wireshark", "Nmap", "GraphQL", "REST API",
+    "WebSockets", "Blockchain", "Solidity", "Hardhat", "Truffle"
   ];
 
   const roles = [
-    "Frontend Developer",
-    "Backend Developer",
-    "Full Stack Developer",
-    "Designer",
-    "Machine Learning Engineer",
-    "AI Engineer",
-    "Cyber Security Engineer",
-    "Other",
+    "Frontend Developer", "Backend Developer", "Full Stack Developer", "Designer",
+    "Machine Learning Engineer", "AI Engineer", "Cyber Security Engineer", "Other"
   ];
 
-  // Add tech stack when typing or selecting
   const handleAddStack = (stack) => {
-    if (stack && !techStacks.includes(stack)) {
-      setTechStacks([...techStacks, stack]);
-    }
+    if (stack && !techStacks.includes(stack)) setTechStacks([...techStacks, stack]);
     setInputStack("");
   };
 
-  // Remove tech stack
   const handleRemoveStack = (stack) => {
     setTechStacks(techStacks.filter((s) => s !== stack));
   };
 
-  // Handle role selection (multiple allowed)
   const toggleRole = (role) => {
     if (rolesSelected.includes(role)) {
       setRolesSelected(rolesSelected.filter((r) => r !== role));
@@ -68,25 +76,47 @@ const ProfileSetUp = () => {
     }
   };
 
-  const handleSubmit = (e) => {
+  // Handle form submission
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return; // prevent multiple clicks
+    setLoading(true);
+
     const profileData = {
       name: e.target.name.value,
-      year: e.target.year.value,
-      collegeMail: e.target.collegeMail.value,
+      year: selectedYear || e.target.year.value,
+      collegeMail: collegeMail || e.target.collegeMail.value,
       techStacks,
       roles: rolesSelected.includes("Other")
         ? [...rolesSelected.filter((r) => r !== "Other"), otherRole]
         : rolesSelected,
       linkedin: e.target.linkedin.value,
-      github: e.target.github.value,
-      bio: e.target.bio.value,
+      github: e.target.github.value || "",  // optional
+      bio: e.target.bio.value || "",        // optional
     };
 
-    console.log("Profile Submitted: ", profileData);
+    try {
+      const response = await fetch("http://localhost:3000/profile/setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(profileData),
+      });
 
-    // 👉 send profileData to backend
-    // navigate("/devs");
+      if (response.ok) {
+        const data = await response.json();
+        console.log("✅ Profile created successfully:", data);
+        alert("Profile created successfully!");
+        navigate("/dashboard"); // navigate after successful save
+      } else {
+        console.error("❌ Failed to create profile:", response.status);
+        alert("Failed to create profile");
+      }
+    } catch (error) {
+      console.error("⚠ Error creating profile:", error);
+      alert("Error creating profile");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -113,18 +143,17 @@ const ProfileSetUp = () => {
 
           {/* Year */}
           <div>
-            <label className="text-sm text-gray-400">Year</label>
-            <select
+            <label className="text-sm text-gray-400">
+              Year {selectedYear && <span className="text-green-400">(Auto-detected)</span>}
+            </label>
+            <input
+              type="text"
               name="year"
               required
-              className="w-full p-3 bg-[#0F0F0F] border border-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-            >
-              <option value="">Select Year</option>
-              <option value="1st Year">1st Year</option>
-              <option value="2nd Year">2nd Year</option>
-              <option value="3rd Year">3rd Year</option>
-              <option value="4th Year">4th Year</option>
-            </select>
+              value={selectedYear}
+              readOnly
+              className="w-full p-3 bg-[#0F0F0F] border border-gray-700 text-gray-400 rounded-lg cursor-not-allowed"
+            />
           </div>
 
           {/* College Mail */}
@@ -134,8 +163,9 @@ const ProfileSetUp = () => {
               type="email"
               name="collegeMail"
               required
-              placeholder="yourname@rajalakshmi.edu.in"
-              className="w-full p-3 bg-[#0F0F0F] border border-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              value={collegeMail}
+              readOnly
+              className="w-full p-3 bg-[#0F0F0F] border border-gray-700 text-gray-400 rounded-lg cursor-not-allowed"
             />
           </div>
 
@@ -159,20 +189,29 @@ const ProfileSetUp = () => {
                 </span>
               ))}
             </div>
-            <input
-              type="text"
-              value={inputStack}
-              onChange={(e) => setInputStack(e.target.value)}
-              placeholder="Type or select a tech stack..."
-              className="w-full p-3 bg-[#0F0F0F] border border-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  if (inputStack.trim()) handleAddStack(inputStack.trim());
-                }
-              }}
-              list="tech-options"
-            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={inputStack}
+                onChange={(e) => setInputStack(e.target.value)}
+                placeholder="Type or select a tech stack..."
+                className="flex-1 p-3 bg-[#0F0F0F] border border-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (inputStack.trim()) handleAddStack(inputStack.trim());
+                  }
+                }}
+                list="tech-options"
+              />
+              <button
+                type="button"
+                onClick={() => handleAddStack(inputStack)}
+                className="px-4 bg-purple-600 text-white rounded-lg"
+              >
+                Add
+              </button>
+            </div>
             <datalist id="tech-options">
               {availableStacks.map((stack) => (
                 <option key={stack} value={stack} />
@@ -180,7 +219,7 @@ const ProfileSetUp = () => {
             </datalist>
           </div>
 
-          {/* Preferred Roles */}
+          {/* Roles */}
           <div>
             <label className="text-sm text-gray-400">Preferred Roles</label>
             <div className="flex flex-wrap gap-2 mt-2">
@@ -222,21 +261,20 @@ const ProfileSetUp = () => {
             />
           </div>
 
-          {/* GitHub */}
+          {/* GitHub (Optional) */}
           <div>
-            <label className="text-sm text-gray-400">GitHub Profile</label>
+            <label className="text-sm text-gray-400">GitHub Profile (Optional)</label>
             <input
               type="url"
               name="github"
-              required
               placeholder="https://github.com/username"
               className="w-full p-3 bg-[#0F0F0F] border border-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>
 
-          {/* Bio */}
+          {/* Bio (Optional) */}
           <div>
-            <label className="text-sm text-gray-400">Short Bio (optional)</label>
+            <label className="text-sm text-gray-400">Short Bio (Optional)</label>
             <textarea
               name="bio"
               rows="3"
@@ -248,9 +286,12 @@ const ProfileSetUp = () => {
           {/* Submit */}
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-black font-bold py-3 rounded-xl shadow-lg transition"
+            disabled={loading}
+            className={`w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-black font-bold py-3 rounded-xl shadow-lg transition ${
+              loading ? "opacity-50 cursor-not-allowed" : ""
+            }`}
           >
-            Save Profile
+            {loading ? "Saving..." : "Save Profile"}
           </button>
         </form>
       </div>
