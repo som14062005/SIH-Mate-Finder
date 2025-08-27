@@ -38,8 +38,6 @@ function ChatPage() {
       time: new Date().toLocaleTimeString(),
     };
 
-    // Show instantly in my chat
-    setMessages((prev) => [...prev, msg]);
 
     // Send to backend (other user will receive)
     socket.emit("sendMessage", msg);
